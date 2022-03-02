@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Vault</string>
+    <string name="message_drive_client_is_ready">Google Drive client is ready</string>
+    <string name="message_google_sign_in_failed">Google Sign In failed</string>
+</resources>
