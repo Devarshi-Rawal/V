@@ -106,8 +106,8 @@ public class ImageDetailActivity extends GoogleDriveActivity implements ImageSli
 
         positionWtd = posForWrite;
         pForUtd = positionWtd;
-        /*String reInfo = imagePathArrayList.get(positionWtd);
-        String fName = reInfo.substring(reInfo.lastIndexOf("/") + 1);*/
+        String reInfo = imagePathArrayList.get(positionWtd);
+        String fName = reInfo.substring(reInfo.lastIndexOf("/") + 1);
 
         repos.writeInfo(imagePathArrayList.get(positionWtd));
 
@@ -172,7 +172,7 @@ public class ImageDetailActivity extends GoogleDriveActivity implements ImageSli
                                 dialogChecking.setMessage("Please wait while checking...");
                                 dialogChecking.show();
                                 redundantFile = file.getName();
-                                Toast.makeText(ImageDetailActivity.this, "File Already Exists!", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(ImageDetailActivity.this, "No file to upload!", Toast.LENGTH_SHORT).show();
                                 dialogChecking.dismiss();
                             }
                         }
@@ -202,6 +202,10 @@ public class ImageDetailActivity extends GoogleDriveActivity implements ImageSli
 
                     }
                 });
+
+        Intent intent = new Intent();
+        intent.putExtra("dbFile",db.toString());
+        setResult(RESULT_OK,intent);
 
         /*for (int i=positionUtd; i < uploadToDriveList.size(); i++) {
             Log.d(TAG, "actionOnClickOfUploadToDrive: Uploaded files are: " + uploadToDriveList.get(i).getFile());

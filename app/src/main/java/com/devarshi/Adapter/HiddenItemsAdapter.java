@@ -1,5 +1,6 @@
 package com.devarshi.Adapter;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.view.LayoutInflater;
@@ -21,11 +22,11 @@ import java.util.ArrayList;
 
 public class HiddenItemsAdapter extends RecyclerView.Adapter<HiddenItemsAdapter.RecyclerViewHolder>{
 
-    private final Context context;
+    private final Activity context;
     private final ArrayList<String> imagePathArrayList;
 
     // on below line we have created a constructor.
-    public HiddenItemsAdapter(Context context, ArrayList<String> imagePathArrayList) {
+    public HiddenItemsAdapter(Activity context, ArrayList<String> imagePathArrayList) {
         this.context = context;
         this.imagePathArrayList = imagePathArrayList;
     }
@@ -67,7 +68,7 @@ public class HiddenItemsAdapter extends RecyclerView.Adapter<HiddenItemsAdapter.
                         i.putExtra("position",position);
 
                         // at last we are starting our activity.
-                        context.startActivity(i);
+                        context.startActivityForResult(i,14);
                     }
                 });
             }
@@ -101,7 +102,7 @@ public class HiddenItemsAdapter extends RecyclerView.Adapter<HiddenItemsAdapter.
                         i.putExtra("imagePathArrayList",imagePathArrayList);
                         i.putExtra("position",position);
 
-                        context.startActivity(i);
+                        context.startActivityForResult(i,14);
                     }
                 });
             }

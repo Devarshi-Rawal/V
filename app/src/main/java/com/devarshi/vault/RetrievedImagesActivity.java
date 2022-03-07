@@ -1,11 +1,15 @@
 package com.devarshi.vault;
 
+import static android.content.ContentValues.TAG;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
 import com.devarshi.Adapter.HiddenItemsAdapter;
@@ -35,9 +39,9 @@ public class RetrievedImagesActivity extends AppCompatActivity {
         intent = getIntent();
         retrievedArrayList = intent.getStringArrayListExtra("restoreImagesList");
 
+        Log.d(TAG, "onCreate: retrievedArrayList: " + retrievedArrayList);
+
         hiddenItemsAdapter = new HiddenItemsAdapter(this,retrievedArrayList);
         recyclerViewRetrieved.setAdapter(hiddenItemsAdapter);
-
-
     }
 }

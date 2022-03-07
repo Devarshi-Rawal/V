@@ -8,6 +8,7 @@ import static androidx.core.content.PackageManagerCompat.LOG_TAG;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -26,10 +27,14 @@ import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.FileUtils;
 import android.os.Parcelable;
 import android.provider.BaseColumns;
 import android.provider.DocumentsContract;
@@ -50,6 +55,8 @@ import com.devarshi.google.GoogleDriveActivity;
 import com.devarshi.google.GoogleDriveApiDataRepository;
 import com.devarshi.model.ImageModel;
 import com.devarshi.safdemo.R;
+import com.devarshi.util.ByteSegments;
+import com.devarshi.util.FileInputSource;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -60,6 +67,7 @@ import com.google.api.services.drive.model.FileList;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -67,6 +75,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -88,14 +98,13 @@ public class MainActivity extends GoogleDriveActivity {
     public SwipeRefreshLayout mSwipeRefreshLayout;
 
     //Variables
-    public String filename;
+    public String filename,dbFile;
     public ArrayList<String> imagePaths;
     ArrayList<String> restoreImagesList;
     Uri uriId;
     public GoogleDriveApiDataRepository repository;
     Drive driveService;
-    String imageEncoded;
-    List<String> imagesEncodedList;
+    String fName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -169,17 +178,40 @@ public class MainActivity extends GoogleDriveActivity {
                             Log.d(TAG, "onSuccess: DB size: " + fileList.size());
                             for (com.google.api.services.drive.model.File file : fileList.getFiles()){
 
+                                String reInfo = file.getName();
+                                fName = reInfo.substring(reInfo.lastIndexOf("/") + 1);
+
 //                                Log.d(TAG, "onSuccess: Filenames: " + repository.readFile(new File(String.valueOf(file)),file.getId()));
-                                Log.d(TAG, "onSuccess: FileName: " + file.getName());
+                                Log.d(TAG, "onSuccess: FileName: " + fName);
                                 Log.d(TAG, "onSuccess: FileIds: " + file.getId());
 
-                                restoreImagesList.add(file.getName());
+                                restoreImagesList.add(fName);
+
+                                try {
+
+                                    byte[] bytes = ByteSegments.toByteArray(new FileInputSource(new File(file.getName())));
+                                    final String encoded = Base64.encodeToString(bytes, Base64.DEFAULT);
+
+                                    Log.d(TAG, "initViews: Encoded: " + encoded);
+
+                                    byte[] decodedString = Base64.decode(encoded, Base64.DEFAULT);
+
+                                   /* File temp = new File(Environment.getExternalStorageDirectory() + "Android/data/com.devarshi.safdemo/files/Backup");
+                                    FileOutputStream imageStream = new FileOutputStream(temp);
+                                    imageStream.write(decodedString);*/
+
+                                    Bitmap bitmap = BitmapFactory.decodeByteArray(decodedString,0,decodedString.length);
+
+                                    createDirectoryAndSaveFile(bitmap,fName);
+
+                                    Log.d(TAG, "onSuccess: Original of encoded is: " + fName);
+
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+
                             }
                             dialog.dismiss();
-
-                            Intent intent = new Intent(MainActivity.this,RetrievedImagesActivity.class);
-                            intent.putExtra("restoreImagesList",restoreImagesList);
-                            startActivity(intent);
                         }
                     })
                     .addOnFailureListener(new OnFailureListener() {
@@ -190,6 +222,10 @@ public class MainActivity extends GoogleDriveActivity {
                     });
 
 
+
+            Intent intent = new Intent(MainActivity.this,RetrievedImagesActivity.class);
+            intent.putExtra("restoreImagesList",restoreImagesList);
+            startActivity(intent);
 
         });
         fAbSelectPhotos.setOnClickListener(v -> browseClick());
@@ -406,6 +442,9 @@ public class MainActivity extends GoogleDriveActivity {
 
                     Log.d(TAG, "onActivityResult: restoreImagesList size: " + restoreImagesList.size());
             }
+            else if (requestCode == 14 && resultCode == RESULT_OK && data != null){
+                dbFile = data.getStringExtra("dbFiles");
+            }
         }catch (Exception e) {
             e.printStackTrace();
         }
@@ -446,6 +485,63 @@ public class MainActivity extends GoogleDriveActivity {
         } finally {
             is.close();
             os.close();
+        }
+    }*/
+
+    private void createDirectoryAndSaveFile(Bitmap imageToSave, String fileName) {
+
+        File direct = new File(Environment.getExternalStorageDirectory() + "/Backup");
+
+        if (!direct.exists()) {
+            File wallpaperDirectory = new File("/sdcard/Backup/");
+            wallpaperDirectory.mkdirs();
+        }
+
+        File file = new File("/sdcard/Backup/", fileName);
+        if (file.exists()) {
+            file.delete();
+        }
+        try {
+            FileOutputStream out = new FileOutputStream(file);
+            imageToSave.compress(Bitmap.CompressFormat.JPEG, 100, out);
+            restoreImagesList.add(fileName);
+            out.flush();
+            out.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /*public void copy(String inputFile, String outputPath) throws IOException {
+        InputStream in = null;
+        OutputStream out = null;
+        try {
+
+            //create output directory if it doesn't exist
+            File dir = new File (outputPath);
+            if (!dir.exists())
+            {
+                dir.mkdirs();
+            }
+
+
+            in = new FileInputStream(inputFile);
+            out = new FileOutputStream(outputPath + inputFile);
+
+            byte[] buffer = new byte[1024];
+            int read;
+            while ((read = in.read(buffer)) != -1) {
+                out.write(buffer, 0, read);
+            }
+            in.close();
+            in = null;
+
+            // write the output file (You have now copied the file)
+            out.flush();
+            out.close();
+            out = null;
+        } catch (Exception e) {
+            Log.d(TAG, "copy: " + e.getMessage());
         }
     }*/
 
