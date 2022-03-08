@@ -203,9 +203,9 @@ public class ImageDetailActivity extends GoogleDriveActivity implements ImageSli
                     }
                 });
 
-        Intent intent = new Intent();
+        /*Intent intent = new Intent();
         intent.putExtra("dbFile",db.toString());
-        setResult(RESULT_OK,intent);
+        setResult(RESULT_OK,intent);*/
 
         /*for (int i=positionUtd; i < uploadToDriveList.size(); i++) {
             Log.d(TAG, "actionOnClickOfUploadToDrive: Uploaded files are: " + uploadToDriveList.get(i).getFile());

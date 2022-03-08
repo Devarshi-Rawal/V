@@ -9,6 +9,7 @@ import static androidx.core.content.PackageManagerCompat.LOG_TAG;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -23,6 +24,7 @@ import android.content.ClipData;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
@@ -30,6 +32,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -40,8 +43,10 @@ import android.provider.BaseColumns;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.OpenableColumns;
+import android.text.Html;
 import android.util.Base64;
 import android.util.Log;
+import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
@@ -88,7 +93,6 @@ public class MainActivity extends GoogleDriveActivity {
     private static final int PERMISSION_REQUEST_CODE = 100;
     private static final int FILE_SELECT_CODE = 101;
     public static final int DELETE_REQUEST_CODE = 102;
-//    private static final String LOG_TAG = "MainActivity";
 
     //Buttons, Views, Layouts, etc.
     private FloatingActionButton fAbSelectPhotos;
@@ -98,13 +102,13 @@ public class MainActivity extends GoogleDriveActivity {
     public SwipeRefreshLayout mSwipeRefreshLayout;
 
     //Variables
-    public String filename,dbFile;
+    public String filename;
     public ArrayList<String> imagePaths;
     ArrayList<String> restoreImagesList;
     Uri uriId;
     public GoogleDriveApiDataRepository repository;
     Drive driveService;
-    String fName;
+    String fName, restorationPath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -133,18 +137,6 @@ public class MainActivity extends GoogleDriveActivity {
         Toast.makeText(this, "Sign in failed", Toast.LENGTH_SHORT).show();
     }
 
-    /*@Override
-    protected void onGoogleDriveSignedInSuccess(Drive driveApi) {
-        showMessage(R.string.message_drive_client_is_ready);
-        repository = new GoogleDriveApiDataRepository(driveApi);
-    }
-
-    @Override
-    protected void onGoogleDriveSignedInFailed(ApiException exception) {
-        showMessage(R.string.message_google_sign_in_failed);
-        Log.e(LOG_TAG, "error google drive sign in", exception);
-    }*/
-
     private void findViews() {
 
         fAbSelectPhotos = findViewById(R.id.selectPhotosFab);
@@ -160,73 +152,7 @@ public class MainActivity extends GoogleDriveActivity {
         restoreImagesList = new ArrayList<>();
 
         fAbRestoreFromDrive.setOnClickListener(v -> {
-            if (repository == null) {
-                showMessage(R.string.message_google_sign_in_failed);
-                return;
-            }
-
-            ProgressDialog dialog = new ProgressDialog(MainActivity.this);
-            dialog.setTitle("Retrieving...");
-            dialog.setMessage("Please wait while retrieving files...");
-            dialog.show();
-
-            repository.queryFiles()
-                    .addOnSuccessListener(new OnSuccessListener<FileList>() {
-                        @Override
-                        public void onSuccess(FileList fileList) {
-
-                            Log.d(TAG, "onSuccess: DB size: " + fileList.size());
-                            for (com.google.api.services.drive.model.File file : fileList.getFiles()){
-
-                                String reInfo = file.getName();
-                                fName = reInfo.substring(reInfo.lastIndexOf("/") + 1);
-
-//                                Log.d(TAG, "onSuccess: Filenames: " + repository.readFile(new File(String.valueOf(file)),file.getId()));
-                                Log.d(TAG, "onSuccess: FileName: " + fName);
-                                Log.d(TAG, "onSuccess: FileIds: " + file.getId());
-
-                                restoreImagesList.add(fName);
-
-                                try {
-
-                                    byte[] bytes = ByteSegments.toByteArray(new FileInputSource(new File(file.getName())));
-                                    final String encoded = Base64.encodeToString(bytes, Base64.DEFAULT);
-
-                                    Log.d(TAG, "initViews: Encoded: " + encoded);
-
-                                    byte[] decodedString = Base64.decode(encoded, Base64.DEFAULT);
-
-                                   /* File temp = new File(Environment.getExternalStorageDirectory() + "Android/data/com.devarshi.safdemo/files/Backup");
-                                    FileOutputStream imageStream = new FileOutputStream(temp);
-                                    imageStream.write(decodedString);*/
-
-                                    Bitmap bitmap = BitmapFactory.decodeByteArray(decodedString,0,decodedString.length);
-
-                                    createDirectoryAndSaveFile(bitmap,fName);
-
-                                    Log.d(TAG, "onSuccess: Original of encoded is: " + fName);
-
-                                } catch (IOException e) {
-                                    e.printStackTrace();
-                                }
-
-                            }
-                            dialog.dismiss();
-                        }
-                    })
-                    .addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-
-                        }
-                    });
-
-
-
-            Intent intent = new Intent(MainActivity.this,RetrievedImagesActivity.class);
-            intent.putExtra("restoreImagesList",restoreImagesList);
-            startActivity(intent);
-
+            showMultiChoice();
         });
         fAbSelectPhotos.setOnClickListener(v -> browseClick());
 
@@ -238,13 +164,10 @@ public class MainActivity extends GoogleDriveActivity {
 
         loadRecyclerView();
 
-        mSwipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                mSwipeRefreshLayout.setRefreshing(true);
-                loadRecyclerView();
-                mSwipeRefreshLayout.setRefreshing(false);
-            }
+        mSwipeRefreshLayout.setOnRefreshListener(() -> {
+            mSwipeRefreshLayout.setRefreshing(true);
+            loadRecyclerView();
+            mSwipeRefreshLayout.setRefreshing(false);
         });
     }
 
@@ -264,17 +187,6 @@ public class MainActivity extends GoogleDriveActivity {
                     } else {
                         imagePaths.add(0, fname);
                     }
-                    /*int index;
-                    if (imagePaths == null){
-                        index = 0;
-                        imagePaths.add(index,fname);
-                        imageRVAdapter.notifyItemInserted(index);
-                    }
-                    else {
-                        index = imagePaths.size() - 1;
-                        imagePaths.add(index,fname);
-                        imageRVAdapter.notifyItemInserted(index);
-                    }*/
                 }
             }
         }
@@ -386,13 +298,10 @@ public class MainActivity extends GoogleDriveActivity {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
         intent.setType("image/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
-        //intent.putExtra("browseCoa", itemToBrowse);
-        //Intent chooser = Intent.createChooser(intent, "Select a File to Upload");
         try {
-            //startActivityForResult(chooser, FILE_SELECT_CODE);
             startActivityForResult(Intent.createChooser(intent, "Select a File to Upload"), FILE_SELECT_CODE);
         } catch (Exception ex) {
-            System.out.println("browseClick :" + ex);//android.content.ActivityNotFoundException ex
+            System.out.println("browseClick :" + ex);
         }
     }
 
@@ -431,73 +340,118 @@ public class MainActivity extends GoogleDriveActivity {
         super.onActivityResult(requestCode, resultCode, data);
         try {
             if (requestCode == FILE_SELECT_CODE && resultCode == RESULT_OK && null != data) {
-                    Uri returnUri = data.getData();
-                    Cursor returnCursor = getContentResolver().query(returnUri, null, null, null, null);
-                    int nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                    returnCursor.moveToFirst();
-                    filename = returnCursor.getString(nameIndex);
-                    String destinationPath = new File(getExternalFilesDir(null), filename).getAbsolutePath();
-                    moveFile(data.getData(), destinationPath, this);
-                    Log.d(TAG, "onActivityResult: destinationPath " + returnUri);
+                Uri returnUri = data.getData();
+                Cursor returnCursor = getContentResolver().query(returnUri, null, null, null, null);
+                int nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                returnCursor.moveToFirst();
+                filename = returnCursor.getString(nameIndex);
+                String destinationPath = new File(getExternalFilesDir(null), filename).getAbsolutePath();
+                moveFile(data.getData(), destinationPath, this);
+                Log.d(TAG, "onActivityResult: destinationPath " + returnUri);
 
-                    Log.d(TAG, "onActivityResult: restoreImagesList size: " + restoreImagesList.size());
-            }
-            else if (requestCode == 14 && resultCode == RESULT_OK && data != null){
-                dbFile = data.getStringExtra("dbFiles");
-            }
-        }catch (Exception e) {
-            e.printStackTrace();
-        }
+                Log.d(TAG, "onActivityResult: restoreImagesList size: " + restoreImagesList.size());
 
-
-    }
-    /*private void copyFileStream(File dest, Uri uri, Context context)
-            throws IOException {
-        InputStream is = null;
-        OutputStream os = null;
-        try {
-            is = context.getContentResolver().openInputStream(uri);
-            os = new FileOutputStream(dest);
-            byte[] buffer = new byte[1024];
-            int length;
-
-            while ((length = is.read(buffer)) > 0) {
-                os.write(buffer, 0, length);
-
-            }
-
-            Uri uriId = getContentUriId(uri);
-
-            try {
-                deleteAPI28(uriId,context);
-            }
-            catch (Exception e){
-                Log.e(TAG, "copyFileStream: "+e.getMessage());
-                try {
-                    deleteAPI30(uriId);
-                }
-                catch (IntentSender.SendIntentException e1){
-                    e1.printStackTrace();
-                }
             }
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            is.close();
-            os.close();
         }
-    }*/
+
+    }
+
+    private void showMultiChoice() {
+
+        AlertDialog.Builder builderChoose = new AlertDialog.Builder(this,R.style.CustomAlertDialog);
+        builderChoose.setTitle("Restore:");
+        final CharSequence[] items = {"Restore to original Path", "Restore to " + "/Backup " + " folder and show"};
+        int checkedItem = 0;
+        builderChoose.setSingleChoiceItems(items, checkedItem, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                switch (which){
+                    case 0:
+                        Toast.makeText(MainActivity.this, "Restored to original path", Toast.LENGTH_SHORT).show();
+                        break;
+                    case 1:
+                        retrieveImages();
+                        break;
+                }
+            }
+        });
+        AlertDialog alert = builderChoose.create();
+        alert.setCanceledOnTouchOutside(true);
+        alert.show();
+    }
+
+    private void retrieveImages(){
+        if (repository == null) {
+            showMessage(R.string.message_google_sign_in_failed);
+            return;
+        }
+
+        ProgressDialog mDialog = new ProgressDialog(MainActivity.this);
+        mDialog.setTitle("Retrieving...");
+        mDialog.setMessage("Please wait while retrieving files...");
+        mDialog.show();
+
+        repository.queryFiles()
+                .addOnSuccessListener(new OnSuccessListener<FileList>() {
+                    @Override
+                    public void onSuccess(FileList fileList) {
+
+                        Log.d(TAG, "onSuccess: DB size: " + fileList.size());
+                        for (com.google.api.services.drive.model.File file : fileList.getFiles()) {
+
+                            String reInfo = file.getName();
+                            fName = reInfo.substring(reInfo.lastIndexOf("/") + 1);
+
+                            Log.d(TAG, "onSuccess: FileName: " + fName);
+                            Log.d(TAG, "onSuccess: FileIds: " + file.getId());
+
+                            restoreImagesList.add(fName);
+
+                            try {
+
+                                byte[] bytes = ByteSegments.toByteArray(new FileInputSource(new File(file.getName())));
+                                final String encoded = Base64.encodeToString(bytes, Base64.DEFAULT);
+
+                                Log.d(TAG, "initViews: Encoded: " + encoded);
+
+                                byte[] decodedString = Base64.decode(encoded, Base64.DEFAULT);
+
+                                Bitmap bitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.length);
+
+                                createDirectoryAndSaveFile(bitmap, fName);
+
+                                Log.d(TAG, "onSuccess: Original of encoded is: " + fName);
+
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+
+                        }
+                        mDialog.dismiss();
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+
+                    }
+                });
+        Intent addExam = new Intent(MainActivity.this, RetrievedImagesActivity.class);
+        startActivity(addExam);
+    }
 
     private void createDirectoryAndSaveFile(Bitmap imageToSave, String fileName) {
 
         File direct = new File(Environment.getExternalStorageDirectory() + "/Backup");
 
         if (!direct.exists()) {
-            File wallpaperDirectory = new File("/sdcard/Backup/");
+            File wallpaperDirectory = new File(Environment.getExternalStorageDirectory() + "/Backup/");
             wallpaperDirectory.mkdirs();
         }
 
-        File file = new File("/sdcard/Backup/", fileName);
+        File file = new File(Environment.getExternalStorageDirectory() + "/Backup/", fileName);
         if (file.exists()) {
             file.delete();
         }
@@ -511,39 +465,6 @@ public class MainActivity extends GoogleDriveActivity {
             e.printStackTrace();
         }
     }
-
-    /*public void copy(String inputFile, String outputPath) throws IOException {
-        InputStream in = null;
-        OutputStream out = null;
-        try {
-
-            //create output directory if it doesn't exist
-            File dir = new File (outputPath);
-            if (!dir.exists())
-            {
-                dir.mkdirs();
-            }
-
-
-            in = new FileInputStream(inputFile);
-            out = new FileOutputStream(outputPath + inputFile);
-
-            byte[] buffer = new byte[1024];
-            int read;
-            while ((read = in.read(buffer)) != -1) {
-                out.write(buffer, 0, read);
-            }
-            in.close();
-            in = null;
-
-            // write the output file (You have now copied the file)
-            out.flush();
-            out.close();
-            out = null;
-        } catch (Exception e) {
-            Log.d(TAG, "copy: " + e.getMessage());
-        }
-    }*/
 
     private void moveFile(Uri uri, String outputPath, Context context) {
 
@@ -568,17 +489,12 @@ public class MainActivity extends GoogleDriveActivity {
             out.close();
             out = null;
             // delete the original file
-            /*String filePath = getPath(context, uri);
-
-            deleteImage(new File(filePath));*/
             String filePath = getPath(context, uri);
 
             if (filePath != null) {
                 uriId = getContentUriId(Uri.parse(filePath));
             }
-            /*else {
-                uriRecents = getContentUriId(uri);
-            }*/
+
             try {
                 if (filePath != null) {
                     deleteAPI28(uriId, context);
@@ -587,7 +503,6 @@ public class MainActivity extends GoogleDriveActivity {
                 }
             } catch (Exception e) {
                 Log.e(TAG, "moveFile: File not deleted " + e.getMessage());
-//                Toast.makeText(context, "Permission Needed", Toast.LENGTH_SHORT).show();
                 try {
                     if (filePath != null) {
                         deleteAPI30(uriId);
@@ -599,10 +514,8 @@ public class MainActivity extends GoogleDriveActivity {
                 }
             }
 
-        } catch (FileNotFoundException fnfe1) {
+        } catch (Exception fnfe1) {
             Log.e("tag", fnfe1.getMessage());
-        } catch (Exception e) {
-            Log.e("tag", e.getMessage());
         }
 
     }

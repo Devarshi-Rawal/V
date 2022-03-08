@@ -7,6 +7,7 @@
         <entry key="app/src/main/res/drawable-anydpi/ic_cloud_backup.xml" value="0.2865" />
         <entry key="app/src/main/res/drawable-anydpi/ic_restore_from_db.xml" value="0.2865" />
         <entry key="app/src/main/res/drawable-v24/ic_launcher_foreground.xml" value="0.2915" />
+        <entry key="app/src/main/res/drawable/dialog_rounded_background.xml" value="0.2865" />
         <entry key="app/src/main/res/drawable/ic_baseline_photo_24.xml" value="0.2665" />
         <entry key="app/src/main/res/drawable/ic_baseline_play_arrow.xml" value="0.2665" />
         <entry key="app/src/main/res/drawable/ic_launcher_background.xml" value="0.2915" />
