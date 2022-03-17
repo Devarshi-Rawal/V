@@ -62,6 +62,7 @@ import com.devarshi.model.ImageModel;
 import com.devarshi.safdemo.R;
 import com.devarshi.util.ByteSegments;
 import com.devarshi.util.FileInputSource;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -107,8 +108,9 @@ public class MainActivity extends GoogleDriveActivity {
     ArrayList<String> restoreImagesList;
     Uri uriId;
     public GoogleDriveApiDataRepository repository;
+    GoogleSignInAccount signInA;
     Drive driveService;
-    String fName, restorationPath;
+    String fName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -126,9 +128,10 @@ public class MainActivity extends GoogleDriveActivity {
 
 
     @Override
-    protected void onGoogleDriveSignedInSuccess(Drive driveApi) {
+    protected void onGoogleDriveSignedInSuccess(Drive driveApi, GoogleSignInAccount signInAccount) {
         repository = new GoogleDriveApiDataRepository(driveApi);
         driveService = driveApi;
+        signInA = signInAccount;
         Toast.makeText(this, "Signed in successfully", Toast.LENGTH_SHORT).show();
     }
 
@@ -153,6 +156,8 @@ public class MainActivity extends GoogleDriveActivity {
 
         fAbRestoreFromDrive.setOnClickListener(v -> {
             showMultiChoice();
+            String loginEmail = signInA.getEmail();
+            Toast.makeText(this, loginEmail, Toast.LENGTH_SHORT).show();
         });
         fAbSelectPhotos.setOnClickListener(v -> browseClick());
 
@@ -315,8 +320,6 @@ public class MainActivity extends GoogleDriveActivity {
         if (ContextCompat.checkSelfPermission(this, READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
                 && ContextCompat.checkSelfPermission(this, WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
-        } else {
-
         }
     }
 
@@ -347,7 +350,6 @@ public class MainActivity extends GoogleDriveActivity {
                 filename = returnCursor.getString(nameIndex);
                 String destinationPath = new File(getExternalFilesDir(null), filename).getAbsolutePath();
                 moveFile(data.getData(), destinationPath, this);
-                Log.d(TAG, "onActivityResult: destinationPath " + returnUri);
 
                 Log.d(TAG, "onActivityResult: restoreImagesList size: " + restoreImagesList.size());
 
@@ -489,26 +491,25 @@ public class MainActivity extends GoogleDriveActivity {
             out.close();
             out = null;
             // delete the original file
-            String filePath = getPath(context, uri);
+            /*String filePath = getPath(context, uri);
+            Log.d(TAG, "moveFile: filepath: " + new File(filePath).getParent());*/
 
-            if (filePath != null) {
+            /*if (filePath != null) {
                 uriId = getContentUriId(Uri.parse(filePath));
-            }
+            }*/
+
+            uriId = getContentUriId(uri);
 
             try {
-                if (filePath != null) {
-                    deleteAPI28(uriId, context);
+                deleteAPI28(uriId, context);
+                /*if (filePath != null) {
                 } else {
                     deleteAPI28(uri, context);
-                }
+                }*/
             } catch (Exception e) {
                 Log.e(TAG, "moveFile: File not deleted " + e.getMessage());
                 try {
-                    if (filePath != null) {
-                        deleteAPI30(uriId);
-                    } else {
-                        deleteAPI30(uri);
-                    }
+                    deleteAPI30(uriId);
                 } catch (IntentSender.SendIntentException e1) {
                     Log.e(TAG, "moveFile: File not deleted " + e1.getMessage());
                 }
@@ -517,7 +518,6 @@ public class MainActivity extends GoogleDriveActivity {
         } catch (Exception fnfe1) {
             Log.e("tag", fnfe1.getMessage());
         }
-
     }
 
     private void deleteAPI30(Uri imageUri) throws IntentSender.SendIntentException {
@@ -526,10 +526,7 @@ public class MainActivity extends GoogleDriveActivity {
 
         List<Uri> uriList = new ArrayList<>();
         Collections.addAll(uriList, imageUri);
-        PendingIntent pendingIntent = null;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            pendingIntent = MediaStore.createDeleteRequest(contentResolver, uriList);
-        }
+        PendingIntent pendingIntent = MediaStore.createDeleteRequest(contentResolver, uriList);
         this.startIntentSenderForResult(pendingIntent.getIntentSender(),
                 DELETE_REQUEST_CODE, null, 0,
                 0, 0, null);

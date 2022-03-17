@@ -26,6 +26,7 @@ import com.devarshi.google.GoogleDriveActivity;
 import com.devarshi.google.GoogleDriveApiDataRepository;
 import com.devarshi.model.ImageModel;
 import com.devarshi.safdemo.R;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -46,6 +47,7 @@ public class ImageDetailActivity extends GoogleDriveActivity implements ImageSli
     //Layouts, Views, instants of adapter, etc.
     ViewPager2 viewPagerViewer;
     ImageSlidingAdapter.ImageSlidingViewHolder imageSlidingViewHolder;
+    ImageSlidingAdapter imageSlidingAdapter;
 
     //Variables
     public GoogleDriveApiDataRepository repository;
@@ -73,6 +75,10 @@ public class ImageDetailActivity extends GoogleDriveActivity implements ImageSli
 
         initViews();
 
+        /*Intent intent = new Intent();
+        intent.putExtra("position",position);
+        setResult(RESULT_OK,intent);*/
+
         /*Intent intentList = new Intent();
         intentList.putExtra("uploadToDriveList", uploadToDriveList);
         setResult(1,intentList);*/
@@ -86,7 +92,7 @@ public class ImageDetailActivity extends GoogleDriveActivity implements ImageSli
     }
 
     @Override
-    protected void onGoogleDriveSignedInSuccess(Drive driveApi) {
+    protected void onGoogleDriveSignedInSuccess(Drive driveApi, GoogleSignInAccount signInAccount) {
         repository = new GoogleDriveApiDataRepository(driveApi);
         driveService = driveApi;
         Log.d(LOG_TAG, "onGoogleDriveSignedInSuccess: log in successful");
@@ -106,8 +112,6 @@ public class ImageDetailActivity extends GoogleDriveActivity implements ImageSli
 
         positionWtd = posForWrite;
         pForUtd = positionWtd;
-        String reInfo = imagePathArrayList.get(positionWtd);
-        String fName = reInfo.substring(reInfo.lastIndexOf("/") + 1);
 
         repos.writeInfo(imagePathArrayList.get(positionWtd));
 
@@ -203,10 +207,6 @@ public class ImageDetailActivity extends GoogleDriveActivity implements ImageSli
                     }
                 });
 
-        /*Intent intent = new Intent();
-        intent.putExtra("dbFile",db.toString());
-        setResult(RESULT_OK,intent);*/
-
         /*for (int i=positionUtd; i < uploadToDriveList.size(); i++) {
             Log.d(TAG, "actionOnClickOfUploadToDrive: Uploaded files are: " + uploadToDriveList.get(i).getFile());
         }*/
@@ -242,7 +242,7 @@ public class ImageDetailActivity extends GoogleDriveActivity implements ImageSli
         imagePathArrayList = (ArrayList<String>) getIntent().getSerializableExtra("imagePathArrayList");
         position = intent.getIntExtra("position", 0);
         Log.d(TAG, "initViews: position: " + position);
-        ImageSlidingAdapter imageSlidingAdapter = new ImageSlidingAdapter(this, imagePathArrayList, this);
+        imageSlidingAdapter = new ImageSlidingAdapter(this, imagePathArrayList, this);
         viewPagerViewer.setAdapter(imageSlidingAdapter);
         viewPagerViewer.setCurrentItem(position, false);
         viewPagerViewer.setOffscreenPageLimit(1);

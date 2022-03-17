@@ -22,7 +22,7 @@ public abstract class GoogleDriveActivity extends GoogleSignInActivity {
         startGoogleSignIn();
     }
 
-    protected abstract void onGoogleDriveSignedInSuccess(final Drive driveApi);
+    protected abstract void onGoogleDriveSignedInSuccess(final Drive driveApi, final GoogleSignInAccount signInAccount);
 
     protected abstract void onGoogleDriveSignedInFailed(final ApiException exception);
 
@@ -68,6 +68,6 @@ public abstract class GoogleDriveActivity extends GoogleSignInActivity {
         Drive driveApi = builder
                 .setApplicationName(appName)
                 .build();
-        onGoogleDriveSignedInSuccess(driveApi);
+        onGoogleDriveSignedInSuccess(driveApi,signInAccount);
     }
 }

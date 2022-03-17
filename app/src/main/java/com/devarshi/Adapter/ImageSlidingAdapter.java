@@ -19,8 +19,6 @@ public class ImageSlidingAdapter extends RecyclerView.Adapter<ImageSlidingAdapte
 
     final Context context;
     final ArrayList<String> imagePathArrayList;
-    //    private static final String GOOGLE_DRIVE_DB_LOCATION = "db";
-//    public GoogleDriveApiDataRepository repository;
     public ClickInterface clickInterface;
 
     public ImageSlidingAdapter(Context context, ArrayList<String> imagePathArrayList, ClickInterface clickInterface) {
@@ -55,7 +53,6 @@ public class ImageSlidingAdapter extends RecyclerView.Adapter<ImageSlidingAdapte
 
         holder.imageViewUploadToDrive.setOnClickListener(v -> clickInterface.actionOnClickOfUploadToDrive(position));
     }
-
 
     @Override
     public int getItemCount() {
